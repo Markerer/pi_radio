@@ -8,6 +8,11 @@ import threading
 import collections
 import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
+import alsaaudio
+
+mixer = alsaaudio.Mixer('SoftMaster')
+
+last_volume = 100
 
 current_station = 1
 stop_threads = False
@@ -124,6 +129,9 @@ def display_station(cv, name):
             lcd.lcd_display_string(lcd_text,3)
             time.sleep(0.5)
             lcd.lcd_display_string(str_pad,3)
+            current_volume = 'HANGERO: ' + str(mixer.getvolume()[0])
+            str_pad_volume = (lcd_width - len(current_volume)) * " "
+            lcd.lcd_display_string(current_volume + str_pad_volume, 4)
 
 def start_stream(url, process=None):
     if not (process is None):
@@ -156,6 +164,41 @@ def handle_rotary_encoder():
     finally:
         ky040.stop()
         GPIO.cleanup()
+
+def handle_volume_rotary_encoder():
+    global stop_all
+    CLOCKPIN = 5
+    DATAPIN = 6
+    SWITCHPIN = 13
+    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
+    ky040.start()
+    try:
+        while(not stop_all):
+            time.sleep(0.1)
+    finally:
+        ky040.stop()
+        GPIO.cleanup()
+
+def rotaryVolumeChange(direction):
+    current_volume = mixer.getvolume()[0]
+    if(direction == 0 and current_volume >= 5):
+        mixer.setvolume(current_volume - 5)
+    if(direction == 1 and current_volume <= 95):
+        mixer.setvolume(current_volume + 5)
+    print('Current_volume: ', current_volume)
+    print('New value: ', mixer.getvolume())
+
+# Callback for switch button pressed
+def volumeSwitchPressed():
+    global last_volume
+    current_volume = mixer.getvolume()[0]
+    if(current_volume > 0):
+        mixer.setvolume(0)
+        last_volume = current_volume
+        print('Muted')
+    else:
+        mixer.setvolume(last_volume)
+        print('Unmuted')
 
 def rotaryChange(direction):
     global current_station
@@ -214,6 +257,9 @@ def main():
     t3 = threading.Thread(target = handle_rotary_encoder)
     threads.append(t3)
     t3.start()
+    t4 = threading.Thread(target = handle_volume_rotary_encoder)
+    threads.append(t4)
+    t4.start()
 
 if __name__ == '__main__':
     main()
