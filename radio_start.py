@@ -65,12 +65,34 @@ def stop_all_threads():
     global stop_all
     global stop_threads
     global process
+    global lcd
     stop_all = True
     stop_threads = True
-    kill(process.pid)
     for t in threads:
-        print('joining %s ', t.getName())
+        print('joining ', t.getName())
         t.join()
+
+    lcd.lcd_clear()
+    lcd.backlight(0)
+    kill(process.pid)
+
+    #
+#MPlayer interrupted by signal 2 in module: enable_cache
+#Exception ignored in: <module 'threading' from '/usr/lib/python3.7/threading.py'>
+#Traceback (most recent call last):
+#  File "/usr/lib/python3.7/threading.py", line 1281, in _shutdown
+    #t.join()
+#MPlayer interrupted by signal 2 in module: play_audio
+  #File "/usr/lib/python3.7/threading.py", line 1032, in join
+    #self._wait_for_tstate_lock()
+  #File "/usr/lib/python3.7/threading.py", line 1048, in _wait_for_tstate_lock
+#stop_extract
+#joining  display_thread
+#joining  rotary_thread
+#joining  rotary_volume_thread
+    #elif lock.acquire(block, timeout):
+
+
 
 def stop_some_threads():
     global threads
@@ -79,7 +101,7 @@ def stop_some_threads():
     stop_threads = True
     for t in threads:
         if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
-            print('joining %s ', t.getName())
+            print('joining ', t.getName())
             t.join()
     for t in threads:
         if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
@@ -92,11 +114,12 @@ def extract_stream_title(cv, append):
     global stop_threads
     global process
     while(not stop_threads):
-        if stop_threads:
-            print('stop_extract')
-            break
         for line in iter(process.stdout.readline, ''):
             append(line)
+
+            if stop_threads:
+                print('stop_extract')
+                break
 
             if not line:
                 print('could not read line')
@@ -170,14 +193,13 @@ def handle_volume_rotary_encoder():
     CLOCKPIN = 5
     DATAPIN = 6
     SWITCHPIN = 13
-    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
-    ky040.start()
+    volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
+    volky040.start()
     try:
         while(not stop_all):
             time.sleep(0.1)
     finally:
-        ky040.stop()
-        GPIO.cleanup()
+        volky040.stop()
 
 def rotaryVolumeChange(direction):
     current_volume = mixer.getvolume()[0]
@@ -223,7 +245,6 @@ def rotaryChange(direction):
     num_of_lines = 1
     q = collections.deque(maxlen=num_of_lines)
     t1 = threading.Thread(target=extract_stream_title, args=[condition, q.append], name='extract_thread')
-    t1.daemon = True
     threads.append(t1)
     t1.start()
     t2 = threading.Thread(target = display_station, args=[condition, get_current_station_name()], name='display_thread')
@@ -248,16 +269,15 @@ def main():
     num_of_lines = 1
     q = collections.deque(maxlen=num_of_lines)
     t1 = threading.Thread(target=extract_stream_title, args=[condition, q.append], name='extract_thread')
-    t1.daemon = True
     threads.append(t1)
     t1.start()
     t2 = threading.Thread(target = display_station, args=[condition, get_current_station_name()], name='display_thread')
     threads.append(t2)
     t2.start()
-    t3 = threading.Thread(target = handle_rotary_encoder)
+    t3 = threading.Thread(target = handle_rotary_encoder, name='rotary_thread')
     threads.append(t3)
     t3.start()
-    t4 = threading.Thread(target = handle_volume_rotary_encoder)
+    t4 = threading.Thread(target = handle_volume_rotary_encoder, name='rotary_volume_thread')
     threads.append(t4)
     t4.start()
 
