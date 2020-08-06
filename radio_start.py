@@ -41,7 +41,7 @@ stations = [
     },
     {
         'name': 'Megadance',
-        'url': 'https://cloudfront41.lexanetwork.com:8080/livemega.mp3'
+        'url': 'http://megadanceradio.hopto.org:8000/livemega.mp3'
     },
     {
         'name': 'Retro radio',
@@ -64,17 +64,23 @@ def stop_all_threads():
     global threads
     global stop_all
     global stop_threads
-    global process
     global lcd
+    global process
     stop_all = True
     stop_threads = True
     for t in threads:
         print('joining ', t.getName())
-        t.join()
-        if(t.getName() == 'display_thread'):
-            lcd.lcd_clear()
-            lcd.backlight(0)
+        if(t.getName() != 'rotary_thread'):
+            t.join()
+    for t in threads:
+        if(t.getName() != 'rotary_thread'):
+            threads.remove(t)
+
+    lcd.lcd_clear()
+    lcd.backlight(0)
     kill(process.pid)
+    threads[0].join()
+    subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def stop_some_threads():
     global threads
@@ -90,14 +96,33 @@ def stop_some_threads():
             threads.remove(t)
     stop_threads = False
 
+def send_empty_message_periodically():
+    global process
+    try:
+        while True:
+            global stop_all
+            if stop_all:
+                print('stop_msg')
+                break
+            poll = process.poll()
+            if poll == None:
+                process.stdin.write(b'123\n')
+            time.sleep(1)
+    finally:
+        poll = process.poll()
+        if poll == None:
+            process.stdin.close()
+
 def extract_stream_title():
     global title
     global lcd_width
-    global stop_threads
     global process
-    while(not stop_threads):
+    while True:
+        global stop_threads
+        if stop_threads:
+            print('stop_extract')
+            break
         for line in iter(process.stdout.readline, ''):
-
             if stop_threads:
                 print('stop_extract')
                 break
@@ -108,8 +133,10 @@ def extract_stream_title():
                 break
             else:
                 print(line)
-                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('ISO-8859-1'))
+                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('ISO-8859-2'))
                 if(len(matches) > 0):
+                    tmp_title = tmp_title.upper()
+                    tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O')
                     tmp_title = unidecode.unidecode(matches[-1])
                     print(tmp_title)
                     str_pad = " " * lcd_width
@@ -119,11 +146,15 @@ def display_station(name):
     global lcd
     global title
     global lcd_width
-    global stop_threads
     str_pad = " " * lcd_width
     str_pad_station = (lcd_width - len(name)) * " "
-    while (not stop_threads):
+    while True:
+        global stop_threads
+        if stop_threads:
+            print('stop_disp')
+            break
         for i in range (0, len(title)):
+
             if stop_threads:
                 print('stop_disp')
                 break
@@ -141,7 +172,7 @@ def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
     args = ['mplayer', url]
-    proc = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE)
+    proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     return proc
 
 def get_current_station_name():
@@ -156,31 +187,36 @@ def switch_station():
     process = start_stream(stations[current_station].get('url'), process)
 
 def handle_rotary_encoder():
-    global stop_all
     CLOCKPIN = 7
     DATAPIN = 8
     SWITCHPIN = 3
-    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=25, switchBouncetime=750)
+    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=75, switchBouncetime=750)
     ky040.start()
     try:
-        while(not stop_all):
+        while True:
+            global stop_all
+            if stop_all:
+                break
             time.sleep(0.1)
     finally:
         ky040.stop()
-        GPIO.cleanup()
+        time.sleep(5)
 
 def handle_volume_rotary_encoder():
-    global stop_all
     CLOCKPIN = 5
     DATAPIN = 6
     SWITCHPIN = 13
     volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
     volky040.start()
     try:
-        while(not stop_all):
+        while True:
+            global stop_all
+            if stop_all:
+                break
             time.sleep(0.1)
     finally:
         volky040.stop()
+        GPIO.cleanup()
 
 def rotaryVolumeChange(direction):
     current_volume = mixer.getvolume()[0]
@@ -229,11 +265,13 @@ def rotaryChange(direction):
     threads.append(t2)
     t2.start()
 
+def alibi(sleeptime):
+    time.sleep(sleeptime)
 
 def switchPressed():
     print('switch pressed')
     stop_all_threads()
-    #subprocess.call(['shutdown', '-h', 'now'], shell=False)
+
 
 def main():
     global stations
@@ -251,13 +289,14 @@ def main():
     threads.append(t2)
     t2.start()
     t3 = threading.Thread(target = handle_rotary_encoder, name='rotary_thread')
-    t3.daemon = True
     threads.append(t3)
     t3.start()
     t4 = threading.Thread(target = handle_volume_rotary_encoder, name='rotary_volume_thread')
-    t4.daemon = True
     threads.append(t4)
     t4.start()
+    t5 = threading.Thread(target = send_empty_message_periodically, name='empty_message_thread')
+    threads.append(t5)
+    t5.start()
 
 if __name__ == '__main__':
     main()
