@@ -76,8 +76,10 @@ def stop_some_threads():
         if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
             print('joining %s ', t.getName())
             t.join()
+    for t in threads:
+        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
             threads.remove(t)
-    strop_threads = False
+    stop_threads = False
 
 def extract_stream_title(cv, append):
     global title
@@ -97,7 +99,7 @@ def extract_stream_title(cv, append):
                 break
             else:
                 print(line)
-                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('utf-8'))
+                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('ISO-8859-1'))
                 if(len(matches) > 0):
                     tmp_title = unidecode.unidecode(matches[-1])
                     print(tmp_title)
@@ -110,14 +112,14 @@ def display_station(cv, name):
     global lcd_width
     global stop_threads
     str_pad = " " * lcd_width
-    tmp_title = ""
+    str_pad_station = (lcd_width - len(name)) * " "
     while (not stop_threads):
-        if stop_threads:
-            print('stop_disp')
-            break
         for i in range (0, len(title)):
+            if stop_threads:
+                print('stop_disp')
+                break
             lcd.lcd_display_string("%s     %s" %(time.strftime("%Y/%m/%d"), time.strftime("%H:%M")), 1)
-            lcd.lcd_display_string(name.upper(), 2)
+            lcd.lcd_display_string(name.upper() + str_pad_station, 2)
             lcd_text = title[i:(i+lcd_width)]
             lcd.lcd_display_string(lcd_text,3)
             time.sleep(0.5)
