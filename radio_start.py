@@ -71,28 +71,10 @@ def stop_all_threads():
     for t in threads:
         print('joining ', t.getName())
         t.join()
-
-    lcd.lcd_clear()
-    lcd.backlight(0)
+        if(t.getName() == 'display_thread'):
+            lcd.lcd_clear()
+            lcd.backlight(0)
     kill(process.pid)
-
-    #
-#MPlayer interrupted by signal 2 in module: enable_cache
-#Exception ignored in: <module 'threading' from '/usr/lib/python3.7/threading.py'>
-#Traceback (most recent call last):
-#  File "/usr/lib/python3.7/threading.py", line 1281, in _shutdown
-    #t.join()
-#MPlayer interrupted by signal 2 in module: play_audio
-  #File "/usr/lib/python3.7/threading.py", line 1032, in join
-    #self._wait_for_tstate_lock()
-  #File "/usr/lib/python3.7/threading.py", line 1048, in _wait_for_tstate_lock
-#stop_extract
-#joining  display_thread
-#joining  rotary_thread
-#joining  rotary_volume_thread
-    #elif lock.acquire(block, timeout):
-
-
 
 def stop_some_threads():
     global threads
@@ -108,14 +90,13 @@ def stop_some_threads():
             threads.remove(t)
     stop_threads = False
 
-def extract_stream_title(cv, append):
+def extract_stream_title():
     global title
     global lcd_width
     global stop_threads
     global process
     while(not stop_threads):
         for line in iter(process.stdout.readline, ''):
-            append(line)
 
             if stop_threads:
                 print('stop_extract')
@@ -134,7 +115,7 @@ def extract_stream_title(cv, append):
                     str_pad = " " * lcd_width
                     title = str_pad + tmp_title.upper()
 
-def display_station(cv, name):
+def display_station(name):
     global lcd
     global title
     global lcd_width
@@ -178,7 +159,7 @@ def handle_rotary_encoder():
     global stop_all
     CLOCKPIN = 7
     DATAPIN = 8
-    SWITCHPIN = 25
+    SWITCHPIN = 3
     ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=25, switchBouncetime=750)
     ky040.start()
     try:
@@ -241,13 +222,10 @@ def rotaryChange(direction):
     switch_station()
     stop_some_threads()
 
-    condition = threading.Condition()
-    num_of_lines = 1
-    q = collections.deque(maxlen=num_of_lines)
-    t1 = threading.Thread(target=extract_stream_title, args=[condition, q.append], name='extract_thread')
+    t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
     threads.append(t1)
     t1.start()
-    t2 = threading.Thread(target = display_station, args=[condition, get_current_station_name()], name='display_thread')
+    t2 = threading.Thread(target = display_station, args=[get_current_station_name()], name='display_thread')
     threads.append(t2)
     t2.start()
 
@@ -255,6 +233,7 @@ def rotaryChange(direction):
 def switchPressed():
     print('switch pressed')
     stop_all_threads()
+    #subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def main():
     global stations
@@ -265,19 +244,18 @@ def main():
 
     lcd = i2c_lcd.lcd()
     process = start_stream(stations[current_station].get('url'))
-    condition = threading.Condition()
-    num_of_lines = 1
-    q = collections.deque(maxlen=num_of_lines)
-    t1 = threading.Thread(target=extract_stream_title, args=[condition, q.append], name='extract_thread')
+    t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
     threads.append(t1)
     t1.start()
-    t2 = threading.Thread(target = display_station, args=[condition, get_current_station_name()], name='display_thread')
+    t2 = threading.Thread(target = display_station, args=[get_current_station_name()], name='display_thread')
     threads.append(t2)
     t2.start()
     t3 = threading.Thread(target = handle_rotary_encoder, name='rotary_thread')
+    t3.daemon = True
     threads.append(t3)
     t3.start()
     t4 = threading.Thread(target = handle_volume_rotary_encoder, name='rotary_volume_thread')
+    t4.daemon = True
     threads.append(t4)
     t4.start()
 

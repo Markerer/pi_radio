@@ -16,7 +16,7 @@ Made available under GNU GENERAL PUBLIC LICENSE
 """
 
 # i2c bus (0 -- original Pi, 1 -- Rev 2 Pi)
-I2CBUS = 1
+I2CBUS = 3
 
 # LCD Address
 ADDRESS = 0x27
