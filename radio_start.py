@@ -79,7 +79,6 @@ def stop_all_threads():
     lcd.lcd_clear()
     lcd.backlight(0)
     kill(process.pid)
-    threads[0].join()
     subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def stop_some_threads():
@@ -125,26 +124,19 @@ def extract_stream_title():
         if stop_threads:
             print('stop_extract')
             break
-        for line in iter(process.stdout.readline, ''):
+        for line in process.stdout:
             if stop_threads:
                 print('stop_extract')
                 break
-
-            if not line:
-                print('could not read line')
-                print(line)
-                time.sleep(1)
-                continue
-            else:
-                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('UTF-8'))
-                if(len(matches) > 0):
-                    print(matches[-1])
-                    tmp_title = matches[-1].upper()
-                    tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O')
-                    tmp_title = unidecode.unidecode(tmp_title)
-                    print(tmp_title)
-                    str_pad = " " * lcd_width
-                    title = str_pad + tmp_title.upper()
+            matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('UTF-8'))
+            if(len(matches) > 0):
+                print(matches[-1])
+                tmp_title = matches[-1].upper()
+                tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O')
+                tmp_title = unidecode.unidecode(tmp_title)
+                print(tmp_title)
+                str_pad = " " * lcd_width
+                title = str_pad + tmp_title.upper()
 
 def display_station(name):
     global lcd
@@ -226,7 +218,6 @@ def handle_rotary_encoder():
         GPIO.remove_event_detect(CLOCKPIN)
         GPIO.remove_event_detect(DATAPIN)
         GPIO.remove_event_detect(SWITCHPIN)
-        GPIO.cleanup()
         time.sleep(5)
 
 def handle_volume_rotary_encoder():
