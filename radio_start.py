@@ -132,10 +132,11 @@ def extract_stream_title():
 
             if not line:
                 print('could not read line')
+                print(line)
                 time.sleep(1)
-                break
+                continue
             else:
-                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('ISO-8859-2'))
+                matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('UTF-8'))
                 if(len(matches) > 0):
                     print(matches[-1])
                     tmp_title = matches[-1].upper()
@@ -149,8 +150,9 @@ def display_station(name):
     global lcd
     global title
     global lcd_width
+    global current_station
     str_pad = " " * lcd_width
-    str_pad_station = (lcd_width - len(name)) * " "
+    str_pad_station = (lcd_width - len(name) - 2) * " "
     while True:
         global stop_threads
         if stop_threads:
@@ -163,7 +165,7 @@ def display_station(name):
                 print('stop_disp')
                 break
             lcd.lcd_display_string("%s     %s" %(time.strftime("%Y/%m/%d"), time.strftime("%H:%M")), 1)
-            lcd.lcd_display_string(name.upper() + str_pad_station, 2)
+            lcd.lcd_display_string(name.upper() + str_pad_station + str(current_station + 1).zfill(2), 2)
             lcd_text = title[i:(i+lcd_width)]
             lcd.lcd_display_string(lcd_text,3)
             time.sleep(0.5)
@@ -194,16 +196,37 @@ def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
     SWITCHPIN = 3
-    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=5000, switchBouncetime=750)
-    ky040.start()
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(CLOCKPIN, GPIO.IN)
+    GPIO.setup(DATAPIN, GPIO.IN)
+    GPIO.setup(SWITCHPIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
+    GPIO.add_event_detect(SWITCHPIN, GPIO.FALLING, bouncetime=750)
     try:
         while True:
             global stop_all
             if stop_all:
                 break
             time.sleep(0.1)
+            if GPIO.event_detected(CLOCKPIN):
+                GPIO.remove_event_detect(CLOCKPIN)
+                if GPIO.input(CLOCKPIN) == 0:
+                    data = GPIO.input(DATAPIN)
+                    if data == 1:
+                        rotaryChange(1)
+                    else:
+                        rotaryChange(0)
+                time.sleep(0.5)
+                GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
+            if GPIO.event_detected(SWITCHPIN):
+                if GPIO.input(SWITCHPIN) == 0:
+                    switchPressed()
     finally:
-        ky040.stop()
+        GPIO.setmode(GPIO.BCM)
+        GPIO.remove_event_detect(CLOCKPIN)
+        GPIO.remove_event_detect(DATAPIN)
+        GPIO.remove_event_detect(SWITCHPIN)
+        GPIO.cleanup()
         time.sleep(5)
 
 def handle_volume_rotary_encoder():
@@ -260,14 +283,8 @@ def rotaryChange(direction):
         else:
             current_station = 0
     print('current_station after: ', current_station)
-    killer_thread = threading.Thread(target = stop_some_threads)
-    killer_thread.start()
-    killer_thread.join()
-    print('killer_thread ended')
-    switch_thread = threading.Thread(target = switch_station)
-    switch_thread.start()
-    switch_thread.join()
-    print('switch_thread joined')
+    stop_some_threads()
+    switch_station()
 
     t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
     threads.append(t1)
