@@ -87,21 +87,24 @@ def stop_some_threads():
     global stop_threads
     global process
     stop_threads = True
+    threads_to_remove = []
     for t in threads:
-        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
+        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread') or (t.getName() == 'empty_message_thread')):
             print('joining ', t.getName())
+            threads_to_remove.append(t)
             t.join()
-    for t in threads:
-        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
-            threads.remove(t)
+    for tr in threads_to_remove:
+        if tr in threads:
+            threads.remove(tr)
+    print(len(threads), ' removed ', len(threads_to_remove), 'threads')
     stop_threads = False
 
 def send_empty_message_periodically():
     global process
     try:
         while True:
-            global stop_all
-            if stop_all:
+            global stop_threads
+            if stop_threads:
                 print('stop_msg')
                 break
             poll = process.poll()
@@ -132,12 +135,12 @@ def extract_stream_title():
                 time.sleep(1)
                 break
             else:
-                print(line)
                 matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('ISO-8859-2'))
                 if(len(matches) > 0):
-                    tmp_title = tmp_title.upper()
+                    print(matches[-1])
+                    tmp_title = matches[-1].upper()
                     tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O')
-                    tmp_title = unidecode.unidecode(matches[-1])
+                    tmp_title = unidecode.unidecode(tmp_title)
                     print(tmp_title)
                     str_pad = " " * lcd_width
                     title = str_pad + tmp_title.upper()
@@ -152,6 +155,7 @@ def display_station(name):
         global stop_threads
         if stop_threads:
             print('stop_disp')
+            lcd.lcd_clear()
             break
         for i in range (0, len(title)):
 
@@ -190,7 +194,7 @@ def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
     SWITCHPIN = 3
-    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=75, switchBouncetime=750)
+    ky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryChange, switchPressed, rotaryBouncetime=5000, switchBouncetime=750)
     ky040.start()
     try:
         while True:
@@ -243,6 +247,7 @@ def rotaryChange(direction):
     global current_station
     global stations
     global threads
+    global process
     print('current_station before: ', current_station)
     if(direction == 0):
         if(current_station > 0):
@@ -255,8 +260,14 @@ def rotaryChange(direction):
         else:
             current_station = 0
     print('current_station after: ', current_station)
-    switch_station()
-    stop_some_threads()
+    killer_thread = threading.Thread(target = stop_some_threads)
+    killer_thread.start()
+    killer_thread.join()
+    print('killer_thread ended')
+    switch_thread = threading.Thread(target = switch_station)
+    switch_thread.start()
+    switch_thread.join()
+    print('switch_thread joined')
 
     t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
     threads.append(t1)
@@ -264,9 +275,9 @@ def rotaryChange(direction):
     t2 = threading.Thread(target = display_station, args=[get_current_station_name()], name='display_thread')
     threads.append(t2)
     t2.start()
-
-def alibi(sleeptime):
-    time.sleep(sleeptime)
+    t5 = threading.Thread(target = send_empty_message_periodically, name='empty_message_thread')
+    threads.append(t5)
+    t5.start()
 
 def switchPressed():
     print('switch pressed')

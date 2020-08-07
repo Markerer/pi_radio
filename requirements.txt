@@ -1,3 +1,4 @@
 psutil
 smbus
 unidecode
+RPi-GPIO-Rotary
