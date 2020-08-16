@@ -2,3 +2,4 @@ psutil
 smbus
 unidecode
 RPi-GPIO-Rotary
+mplayer.py

@@ -9,6 +9,7 @@ import collections
 import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
 import alsaaudio
+import requests
 
 mixer = alsaaudio.Mixer('SoftMaster')
 
@@ -17,6 +18,7 @@ last_volume = 100
 current_station = 1
 stop_threads = False
 stop_all = False
+stop_msg_thread = False
 title = ""
 lcd_width = 20
 process = 0
@@ -64,13 +66,19 @@ def stop_all_threads():
     global threads
     global stop_all
     global stop_threads
+    global stop_msg_thread
     global lcd
     global process
     stop_all = True
     stop_threads = True
     for t in threads:
-        print('joining ', t.getName())
-        if(t.getName() != 'rotary_thread'):
+        if(t.getName() != 'rotary_thread' and t.getName != 'empty_message_thread'):
+            print('joining ', t.getName())
+            t.join()
+    for t in threads:
+        if(t.getName() == 'empty_message_tread'):
+            print('joining ', t.getName())
+            stop_msg_thread = True
             t.join()
     for t in threads:
         if(t.getName() != 'rotary_thread'):
@@ -84,11 +92,18 @@ def stop_all_threads():
 def stop_some_threads():
     global threads
     global stop_threads
+    global stop_msg_thread
     global process
     stop_threads = True
     threads_to_remove = []
     for t in threads:
-        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread') or (t.getName() == 'empty_message_thread')):
+        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
+            print('joining ', t.getName())
+            threads_to_remove.append(t)
+            t.join()
+    for t in threads:
+        stop_msg_thread = True
+        if (t.getName() == 'empty_message_thread'):
             print('joining ', t.getName())
             threads_to_remove.append(t)
             t.join()
@@ -97,19 +112,21 @@ def stop_some_threads():
             threads.remove(tr)
     print(len(threads), ' removed ', len(threads_to_remove), 'threads')
     stop_threads = False
+    stop_msg_thread = False
 
 def send_empty_message_periodically():
     global process
     try:
         while True:
-            global stop_threads
-            if stop_threads:
+            global stop_msg_thread
+            if stop_msg_thread:
                 print('stop_msg')
                 break
             poll = process.poll()
             if poll == None:
-                process.stdin.write(b'123\n')
-            time.sleep(1)
+                process.stdin.write(b"123\n")
+                print('wrote empty line')
+            time.sleep(2)
     finally:
         poll = process.poll()
         if poll == None:
@@ -119,16 +136,20 @@ def extract_stream_title():
     global title
     global lcd_width
     global process
+    global current_station
+    global stations
+    global stop_threads
     while True:
-        global stop_threads
         if stop_threads:
             print('stop_extract')
             break
-        for line in process.stdout:
+        time.sleep(1)
+        for line in (process.stdout or b'123\n'):
             if stop_threads:
                 print('stop_extract')
                 break
-            matches = re.findall("ICY Info: StreamTitle='([^']*)", line.decode('UTF-8'))
+            print(line)
+            matches = re.findall("ICY-META: StreamTitle='([^']*)", line.decode('UTF-8'))
             if(len(matches) > 0):
                 print(matches[-1])
                 tmp_title = matches[-1].upper()
@@ -143,6 +164,7 @@ def display_station(name):
     global title
     global lcd_width
     global current_station
+    global stations
     str_pad = " " * lcd_width
     str_pad_station = (lcd_width - len(name) - 2) * " "
     while True:
@@ -151,8 +173,8 @@ def display_station(name):
             print('stop_disp')
             lcd.lcd_clear()
             break
+        time.sleep(1)
         for i in range (0, len(title)):
-
             if stop_threads:
                 print('stop_disp')
                 break
@@ -169,8 +191,8 @@ def display_station(name):
 def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
-    args = ['mplayer', url]
-    proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    args = ['mpg123', '--utf8', '--long-tag', url]
+    proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return proc
 
 def get_current_station_name():
@@ -182,6 +204,7 @@ def switch_station():
     global stations
     global current_station
     global process
+    print(process.pid)
     process = start_stream(stations[current_station].get('url'), process)
 
 def handle_rotary_encoder():
@@ -274,6 +297,7 @@ def rotaryChange(direction):
         else:
             current_station = 0
     print('current_station after: ', current_station)
+    print(process.pid)
     stop_some_threads()
     switch_station()
 
