@@ -9,7 +9,6 @@ import collections
 import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
 import alsaaudio
-import requests
 
 mixer = alsaaudio.Mixer('SoftMaster')
 
@@ -18,7 +17,6 @@ last_volume = 100
 current_station = 1
 stop_threads = False
 stop_all = False
-stop_msg_thread = False
 title = ""
 lcd_width = 20
 process = 0
@@ -47,7 +45,7 @@ stations = [
     },
     {
         'name': 'Retro radio',
-        'url': 'https://stream.retroradio.hu/high.mp3'
+        'url': 'http://stream1.retroradio.hu/high.mp3'
     },
     {
         'name': 'Jolly radio',
@@ -66,19 +64,13 @@ def stop_all_threads():
     global threads
     global stop_all
     global stop_threads
-    global stop_msg_thread
     global lcd
     global process
     stop_all = True
     stop_threads = True
     for t in threads:
-        if(t.getName() != 'rotary_thread' and t.getName != 'empty_message_thread'):
+        if(t.getName() != 'rotary_thread' and t.getName() != 'extract_thread'):
             print('joining ', t.getName())
-            t.join()
-    for t in threads:
-        if(t.getName() == 'empty_message_tread'):
-            print('joining ', t.getName())
-            stop_msg_thread = True
             t.join()
     for t in threads:
         if(t.getName() != 'rotary_thread'):
@@ -92,18 +84,11 @@ def stop_all_threads():
 def stop_some_threads():
     global threads
     global stop_threads
-    global stop_msg_thread
     global process
     stop_threads = True
     threads_to_remove = []
     for t in threads:
-        if((t.getName() == 'extract_thread') or (t.getName() == 'display_thread')):
-            print('joining ', t.getName())
-            threads_to_remove.append(t)
-            t.join()
-    for t in threads:
-        stop_msg_thread = True
-        if (t.getName() == 'empty_message_thread'):
+        if((t.getName() == 'display_thread')):
             print('joining ', t.getName())
             threads_to_remove.append(t)
             t.join()
@@ -112,25 +97,6 @@ def stop_some_threads():
             threads.remove(tr)
     print(len(threads), ' removed ', len(threads_to_remove), 'threads')
     stop_threads = False
-    stop_msg_thread = False
-
-def send_empty_message_periodically():
-    global process
-    try:
-        while True:
-            global stop_msg_thread
-            if stop_msg_thread:
-                print('stop_msg')
-                break
-            poll = process.poll()
-            if poll == None:
-                process.stdin.write(b"123\n")
-                print('wrote empty line')
-            time.sleep(2)
-    finally:
-        poll = process.poll()
-        if poll == None:
-            process.stdin.close()
 
 def extract_stream_title():
     global title
@@ -144,7 +110,7 @@ def extract_stream_title():
             print('stop_extract')
             break
         time.sleep(1)
-        for line in (process.stdout or b'123\n'):
+        for line in process.stdout:
             if stop_threads:
                 print('stop_extract')
                 break
@@ -302,19 +268,16 @@ def rotaryChange(direction):
     switch_station()
 
     t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
+    t1.daemon = True
     threads.append(t1)
     t1.start()
     t2 = threading.Thread(target = display_station, args=[get_current_station_name()], name='display_thread')
     threads.append(t2)
     t2.start()
-    t5 = threading.Thread(target = send_empty_message_periodically, name='empty_message_thread')
-    threads.append(t5)
-    t5.start()
 
 def switchPressed():
     print('switch pressed')
     stop_all_threads()
-
 
 def main():
     global stations
@@ -326,6 +289,7 @@ def main():
     lcd = i2c_lcd.lcd()
     process = start_stream(stations[current_station].get('url'))
     t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
+    t1.daemon = True
     threads.append(t1)
     t1.start()
     t2 = threading.Thread(target = display_station, args=[get_current_station_name()], name='display_thread')
@@ -337,9 +301,6 @@ def main():
     t4 = threading.Thread(target = handle_volume_rotary_encoder, name='rotary_volume_thread')
     threads.append(t4)
     t4.start()
-    t5 = threading.Thread(target = send_empty_message_periodically, name='empty_message_thread')
-    threads.append(t5)
-    t5.start()
 
 if __name__ == '__main__':
     main()
