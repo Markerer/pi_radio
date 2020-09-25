@@ -9,18 +9,21 @@ import collections
 import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
 import alsaaudio
+from lirc import RawConnection
 
 mixer = alsaaudio.Mixer('SoftMaster')
 
 last_volume = 100
 
-current_station = 1
+current_station = 0
 stop_threads = False
 stop_all = False
 title = ""
 lcd_width = 20
 process = 0
 threads = []
+
+ir_conn = RawConnection()
 
 stations = [
     {
@@ -173,6 +176,41 @@ def switch_station():
     print(process.pid)
     process = start_stream(stations[current_station].get('url'), process)
 
+def handle_ir_remote():
+    global ir_conn
+    global stop_threads
+    #get IR command
+    #keypress format = (hexcode, repeat_num, command_key, remote_id)
+    while True:
+        try:
+            if stop_threads:
+                print('stop_ir')
+                break
+            keypress = ir_conn.readline(.0001)
+        except:
+            keypress=""
+
+        time.sleep(0.1)
+        
+        if (keypress != "" and keypress != None):
+                    
+            data = keypress.split()
+            sequence = data[1]
+            command = data[2]
+            
+            #ignore command repeats
+            if (sequence != "00"):
+                return
+            
+            if(command == 'skip_back'):
+                rotaryChange(0)
+                time.sleep(0.5)
+            elif(command == 'skip_forward'):
+                rotaryChange(1)
+                time.sleep(0.5)
+            
+            
+
 def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
@@ -301,6 +339,9 @@ def main():
     t4 = threading.Thread(target = handle_volume_rotary_encoder, name='rotary_volume_thread')
     threads.append(t4)
     t4.start()
+    t5 = threading.Thread(target = handle_ir_remote, name='ir_remote_thread')
+    threads.append(t5)
+    t5.start()
 
 if __name__ == '__main__':
     main()
