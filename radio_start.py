@@ -72,17 +72,18 @@ def stop_all_threads():
     stop_all = True
     stop_threads = True
     for t in threads:
-        if(t.getName() != 'rotary_thread' and t.getName() != 'extract_thread'):
+        if(t.getName() != 'rotary_thread' and t.getName() != 'ir_remote_thread' and t.getName() != 'extract_thread'):
             print('joining ', t.getName())
             t.join()
     for t in threads:
-        if(t.getName() != 'rotary_thread'):
+        if(t.getName() != 'rotary_thread' and t.getName() != 'ir_remote_thread'):
             threads.remove(t)
 
     lcd.lcd_clear()
     lcd.backlight(0)
+    ir_conn.close()
     kill(process.pid)
-    subprocess.call(['shutdown', '-h', 'now'], shell=False)
+    #subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def stop_some_threads():
     global threads
@@ -190,7 +191,7 @@ def handle_ir_remote():
         except:
             keypress=""
 
-        time.sleep(0.5)
+        time.sleep(0.1)
         
         if (keypress != "" and keypress != None):
                     
@@ -208,6 +209,8 @@ def handle_ir_remote():
             elif(command == 'skip_forward'):
                 rotaryChange(1)
                 time.sleep(0.5)
+            elif(command == 'KEY_POWER'):
+                stop_all_threads()
             
             
 
@@ -224,9 +227,10 @@ def handle_rotary_encoder():
     try:
         while True:
             global stop_all
+            GPIO.setmode(GPIO.BCM)
             if stop_all:
                 break
-            time.sleep(0.2)
+            time.sleep(0.1)
             if GPIO.event_detected(CLOCKPIN):
                 GPIO.remove_event_detect(CLOCKPIN)
                 if GPIO.input(CLOCKPIN) == 0:
@@ -258,7 +262,7 @@ def handle_volume_rotary_encoder():
             global stop_all
             if stop_all:
                 break
-            time.sleep(0.2)
+            time.sleep(0.1)
     finally:
         volky040.stop()
         GPIO.cleanup()
