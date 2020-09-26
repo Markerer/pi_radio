@@ -112,7 +112,7 @@ def extract_stream_title():
         if stop_threads:
             print('stop_extract')
             break
-        time.sleep(1)
+        time.sleep(2)
         for line in process.stdout:
             if stop_threads:
                 print('stop_extract')
@@ -178,19 +178,19 @@ def switch_station():
 
 def handle_ir_remote():
     global ir_conn
-    global stop_threads
+    global stop_all
     #get IR command
     #keypress format = (hexcode, repeat_num, command_key, remote_id)
     while True:
+        if stop_all:
+            print('stop_ir')
+            break
         try:
-            if stop_threads:
-                print('stop_ir')
-                break
             keypress = ir_conn.readline(.0001)
         except:
             keypress=""
 
-        time.sleep(0.1)
+        time.sleep(0.5)
         
         if (keypress != "" and keypress != None):
                     
@@ -200,7 +200,7 @@ def handle_ir_remote():
             
             #ignore command repeats
             if (sequence != "00"):
-                return
+                continue
             
             if(command == 'skip_back'):
                 rotaryChange(0)
@@ -226,7 +226,7 @@ def handle_rotary_encoder():
             global stop_all
             if stop_all:
                 break
-            time.sleep(0.1)
+            time.sleep(0.2)
             if GPIO.event_detected(CLOCKPIN):
                 GPIO.remove_event_detect(CLOCKPIN)
                 if GPIO.input(CLOCKPIN) == 0:
@@ -258,7 +258,7 @@ def handle_volume_rotary_encoder():
             global stop_all
             if stop_all:
                 break
-            time.sleep(0.1)
+            time.sleep(0.2)
     finally:
         volky040.stop()
         GPIO.cleanup()
