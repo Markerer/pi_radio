@@ -13,6 +13,7 @@ process = None
 def start_radio():
     global process
     process = subprocess.Popen(['python', '-B', '/home/pi/lcd/radio_start.py'])
+    set_diode('green')
 
 def is_radio_running():
     global process
@@ -91,7 +92,8 @@ def handle_ir_remote():
                 ir_conn.close()
                 shutdown()
 
-def shutdown(): 
+def shutdown():
+    set_diode('yellow')
     subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def join_input_threads():
@@ -110,9 +112,37 @@ def start_input_handling():
     t3 = threading.Thread(target = handle_rotary_encoder, name='rotary_thread')
     threads.append(t3)
     t3.start()
+    set_diode('red')
     print('input handling started')
 
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    # GREEN
+    GPIO.setup(17, GPIO.OUT)
+    # YELLOW
+    GPIO.setup(22, GPIO.OUT)
+    # RED
+    GPIO.setup(27, GPIO.OUT)
+
+def set_diode(color):
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    if(color == 'yellow'):
+        GPIO.output(17, GPIO.LOW)
+        GPIO.output(22, GPIO.HIGH)
+        GPIO.output(27, GPIO.LOW)
+    elif(color == 'green'):
+        GPIO.output(17, GPIO.HIGH)
+        GPIO.output(22, GPIO.LOW)
+        GPIO.output(27, GPIO.LOW)
+    elif(color == 'red'):
+        GPIO.output(17, GPIO.LOW)
+        GPIO.output(22, GPIO.LOW)
+        GPIO.output(27, GPIO.HIGH)
+
 def main():
+    setup_gpio()
     start_radio()
 
     while True:
