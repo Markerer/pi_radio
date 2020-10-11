@@ -20,21 +20,16 @@ def start_radio():
 
 def is_radio_running():
     global process
-    logging.info('Checking if radio_start.py subprocess is running')
     if process is None:
-        logging.info('radio_start.py is not running')
         return False
     else:
         poll = process.poll()
         if poll is None:
-            logging.info('radio_start.py is running')
             return True
-        logging.info('radio_start.py is not running')
         return False
 
 def is_input_handling_running():
     global threads
-    logging.info('Checking if input handling is running')
     is_input_running = False
     counter = 0
     for t in threads:
@@ -42,9 +37,6 @@ def is_input_handling_running():
             counter += 1
     if counter == 2:
         is_input_running = True
-        logging.info('Input handling is already running')
-    else:
-        logging.info('Input handling is not running')
     return is_input_running
 
 def handle_rotary_encoder():
@@ -161,12 +153,12 @@ def set_diode(color):
         GPIO.output(27, GPIO.HIGH)
 
 def main():
+    now = datetime.now().strftime('%Y_%m_%d_%H%M%S')
+    logging.basicConfig(filename='/home/pi/logs/input_watcher_log_' + now + '.log',
+     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
     setup_gpio()
     start_radio()
-
-    now = datetime.now().strftime('%Y_%m_%d_%H%M%S')
-    logging.basicConfig(filename='/home/pi/logs/input_watcher_log_' + now + '.log', datefmt='%Y-%m-%d %I:%M:%S',
-     encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     while True:
         time.sleep(2)

@@ -165,7 +165,7 @@ def start_stream(url, process=None):
         kill(process.pid)
     args = ['mpg123', '--utf8', '--long-tag', url]
     proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    logging.info(f'Starting process with pid: {process.pid}')
+    logging.info(f'Starting process with pid: {proc.pid}')
     return proc
 
 def get_current_station_name():
@@ -333,8 +333,8 @@ def main():
     global threads
 
     now = datetime.now().strftime('%Y_%m_%d_%H%M%S')
-    logging.basicConfig(filename='/home/pi/logs/radio_log_' + now + '.log', datefmt='%Y-%m-%d %I:%M:%S',
-     encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename='/home/pi/logs/radio_log_' + now + '.log',
+     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     lcd = i2c_lcd.lcd()
     process = start_stream(stations[current_station].get('url'))
