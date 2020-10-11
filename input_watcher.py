@@ -6,6 +6,8 @@ import collections
 import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
 from lirc import RawConnection
+import logging
+from datetime import datetime
 
 threads = []
 process = None
@@ -13,20 +15,26 @@ process = None
 def start_radio():
     global process
     process = subprocess.Popen(['python', '-B', '/home/pi/lcd/radio_start.py'])
+    logging.info(f'Radio_start.py subprocess started with pid: {process.pid}')
     set_diode('green')
 
 def is_radio_running():
     global process
+    logging.info('Checking if radio_start.py subprocess is running')
     if process is None:
+        logging.info('radio_start.py is not running')
         return False
     else:
         poll = process.poll()
         if poll is None:
+            logging.info('radio_start.py is running')
             return True
+        logging.info('radio_start.py is not running')
         return False
 
 def is_input_handling_running():
     global threads
+    logging.info('Checking if input handling is running')
     is_input_running = False
     counter = 0
     for t in threads:
@@ -34,6 +42,9 @@ def is_input_handling_running():
             counter += 1
     if counter == 2:
         is_input_running = True
+        logging.info('Input handling is already running')
+    else:
+        logging.info('Input handling is not running')
     return is_input_running
 
 def handle_rotary_encoder():
@@ -51,8 +62,9 @@ def handle_rotary_encoder():
                 return
             time.sleep(0.2)
             if GPIO.event_detected(SWITCHPIN):
+                logging.info('Rotary switch pressed')
                 if GPIO.input(SWITCHPIN) == 0:
-                    print('starting radio from rotary')
+                    logging.info('Starting radio from rotary switch')
                     start_radio()
     finally:
         GPIO.setmode(GPIO.BCM)
@@ -85,21 +97,24 @@ def handle_ir_remote():
                 continue
             
             if(command == 'KEY_POWER'):
-                print('starting radio from ir')
+                logging.info('IR POWER key pressed')
                 ir_conn.close()
+                logging.info('Starting radio from IR')
                 start_radio()
             elif(command == 'KEY_STOP'):
+                logging.info('IR STOP key pressed')
                 ir_conn.close()
                 shutdown()
 
 def shutdown():
+    logging.info('Shutting down the system')
     set_diode('yellow')
     subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
 def join_input_threads():
     global threads
     for t in threads:
-        print('joining ', t.getName())
+        logging.info(f'Joining {t.getName()} thread')
         t.join()
     for t in threads:
         threads.remove(t)
@@ -113,11 +128,12 @@ def start_input_handling():
     threads.append(t3)
     t3.start()
     set_diode('red')
-    print('input handling started')
+    logging.info('Input handling started')
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
+    logging.info('Setting up the GPIO ports for LEDs')
     # GREEN
     GPIO.setup(17, GPIO.OUT)
     # YELLOW
@@ -129,14 +145,17 @@ def set_diode(color):
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     if(color == 'yellow'):
+        logging.info('Turning on yellow LED on GPIO 22')
         GPIO.output(17, GPIO.LOW)
         GPIO.output(22, GPIO.HIGH)
         GPIO.output(27, GPIO.LOW)
     elif(color == 'green'):
+        logging.info('Turning on green LED on GPIO 17')
         GPIO.output(17, GPIO.HIGH)
         GPIO.output(22, GPIO.LOW)
         GPIO.output(27, GPIO.LOW)
     elif(color == 'red'):
+        logging.info('Turning on red LED on GPIO 27')
         GPIO.output(17, GPIO.LOW)
         GPIO.output(22, GPIO.LOW)
         GPIO.output(27, GPIO.HIGH)
@@ -144,6 +163,10 @@ def set_diode(color):
 def main():
     setup_gpio()
     start_radio()
+
+    now = datetime.now().strftime('%Y_%m_%d_%H%M%S')
+    logging.basicConfig(filename='/home/pi/logs/input_watcher_log_' + now + '.log', datefmt='%Y-%m-%d %I:%M:%S',
+     encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     while True:
         time.sleep(2)

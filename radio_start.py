@@ -10,6 +10,8 @@ import RPi.GPIO as GPIO
 from ky040.KY040 import KY040
 import alsaaudio
 from lirc import RawConnection
+import logging
+from datetime import datetime
 
 mixer = alsaaudio.Mixer('SoftMaster')
 
@@ -61,7 +63,7 @@ def kill(proc_pid):
     for proc in process.children(recursive=True):
         proc.kill()
     process.kill()
-    print('audio processes killed')
+    logging.info(f'Process with pid: {proc_pid} has been killed')
 
 def stop_all_threads():
     global threads
@@ -73,7 +75,7 @@ def stop_all_threads():
     stop_threads = True
     for t in threads:
         if(t.getName() != 'rotary_thread' and t.getName() != 'ir_remote_thread' and t.getName() != 'extract_thread'):
-            print('joining ', t.getName())
+            logging.info(f'Joining {t.getName()} thread')
             t.join()
     for t in threads:
         if(t.getName() != 'rotary_thread' and t.getName() != 'ir_remote_thread'):
@@ -93,13 +95,13 @@ def stop_some_threads():
     threads_to_remove = []
     for t in threads:
         if((t.getName() == 'display_thread')):
-            print('joining ', t.getName())
+            logging.info(f'Joining {t.getName()} thread')
             threads_to_remove.append(t)
             t.join()
     for tr in threads_to_remove:
         if tr in threads:
             threads.remove(tr)
-    print(len(threads), ' removed ', len(threads_to_remove), 'threads')
+    logging.info(f'From {len(threads)} threads {len(threads_to_remove)} have been removed')
     stop_threads = False
 
 def extract_stream_title():
@@ -111,21 +113,21 @@ def extract_stream_title():
     global stop_threads
     while True:
         if stop_threads:
-            print('stop_extract')
+            logging.info('Stopping extract thread from extract root')
             break
         time.sleep(2)
         for line in process.stdout:
             if stop_threads:
-                print('stop_extract')
+                logging.info('Stopping extract thread from extract for cycle')
                 break
-            print(line)
+            logging.info(line)
             matches = re.findall("ICY-META: StreamTitle='([^']*)", line.decode('UTF-8'))
             if(len(matches) > 0):
-                print(matches[-1])
+                logging.info(matches[-1])
                 tmp_title = matches[-1].upper()
                 tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O')
                 tmp_title = unidecode.unidecode(tmp_title)
-                print(tmp_title)
+                logging.info(tmp_title)
                 str_pad = " " * lcd_width
                 title = str_pad + tmp_title.upper()
 
@@ -140,13 +142,13 @@ def display_station(name):
     while True:
         global stop_threads
         if stop_threads:
-            print('stop_disp')
+            logging.info('Stopping display thread from display root')
             lcd.lcd_clear()
             break
         time.sleep(1)
         for i in range (0, len(title)):
             if stop_threads:
-                print('stop_disp')
+                logging.info('Stopping display thread from display for cycle')
                 break
             lcd.lcd_display_string("%s     %s" %(time.strftime("%Y/%m/%d"), time.strftime("%H:%M")), 1)
             lcd.lcd_display_string(name.upper() + str_pad_station + str(current_station + 1).zfill(2), 2)
@@ -163,6 +165,7 @@ def start_stream(url, process=None):
         kill(process.pid)
     args = ['mpg123', '--utf8', '--long-tag', url]
     proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    logging.info(f'Starting process with pid: {process.pid}')
     return proc
 
 def get_current_station_name():
@@ -174,7 +177,6 @@ def switch_station():
     global stations
     global current_station
     global process
-    print(process.pid)
     process = start_stream(stations[current_station].get('url'), process)
 
 def handle_ir_remote():
@@ -184,7 +186,7 @@ def handle_ir_remote():
     #keypress format = (hexcode, repeat_num, command_key, remote_id)
     while True:
         if stop_all:
-            print('stop_ir')
+            logging.info('Stopping IR thread')
             break
         try:
             keypress = ir_conn.readline(.0001)
@@ -204,12 +206,15 @@ def handle_ir_remote():
                 continue
             
             if(command == 'skip_back'):
+                logging.info('IR SKIP_BACK key pressed')
                 rotaryChange(0)
                 time.sleep(0.5)
             elif(command == 'skip_forward'):
+                logging.info('IR SKIP_FORWARD key pressed')
                 rotaryChange(1)
                 time.sleep(0.5)
             elif(command == 'KEY_POWER'):
+                logging.info('IR POWER key pressed')
                 stop_all_threads()
             
             
@@ -273,8 +278,8 @@ def rotaryVolumeChange(direction):
         mixer.setvolume(current_volume - 5)
     if(direction == 1 and current_volume <= 95):
         mixer.setvolume(current_volume + 5)
-    print('Current_volume: ', current_volume)
-    print('New value: ', mixer.getvolume())
+    logging.info(f'Current_volume: {current_volume}')
+    logging.info(f'New value: {mixer.getvolume()}')
 
 # Callback for switch button pressed
 def volumeSwitchPressed():
@@ -283,17 +288,17 @@ def volumeSwitchPressed():
     if(current_volume > 0):
         mixer.setvolume(0)
         last_volume = current_volume
-        print('Muted')
+        logging.info('Muted')
     else:
         mixer.setvolume(last_volume)
-        print('Unmuted')
+        logging.info('Unmuted')
 
 def rotaryChange(direction):
     global current_station
     global stations
     global threads
     global process
-    print('current_station before: ', current_station)
+    logging.info(f'current_station before: {current_station}')
     if(direction == 0):
         if(current_station > 0):
             current_station -= 1
@@ -304,8 +309,7 @@ def rotaryChange(direction):
             current_station += 1
         else:
             current_station = 0
-    print('current_station after: ', current_station)
-    print(process.pid)
+    logging.info(f'current_station after: {current_station}')
     stop_some_threads()
     switch_station()
 
@@ -318,7 +322,7 @@ def rotaryChange(direction):
     t2.start()
 
 def switchPressed():
-    print('switch pressed')
+    logging.info('Rotary switch pressed, shutting down python process')
     stop_all_threads()
 
 def main():
@@ -327,6 +331,10 @@ def main():
     global lcd
     global process
     global threads
+
+    now = datetime.now().strftime('%Y_%m_%d_%H%M%S')
+    logging.basicConfig(filename='/home/pi/logs/radio_log_' + now + '.log', datefmt='%Y-%m-%d %I:%M:%S',
+     encoding='utf-8', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     lcd = i2c_lcd.lcd()
     process = start_stream(stations[current_station].get('url'))
