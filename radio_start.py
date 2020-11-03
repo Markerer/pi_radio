@@ -121,13 +121,11 @@ def extract_stream_title():
                 logging.info('Stopping extract thread from extract for cycle')
                 break
             logging.info(line)
-            matches = re.findall("ICY-META: StreamTitle='(.*)(\\';$)", line.decode('UTF-8'))
+            matches = re.findall("ICY-META: StreamTitle='(.*?(?=\\';))", line.decode('UTF-8'))
             if(len(matches) > 0):
-                logging.info(matches[0][0])
-                tmp_title = matches[0][0].upper()
-                tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U')\
-                    .replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O')\
-                    .replace('Ő', 'O').replace("'", '').replace('.', '')
+                logging.info(matches[0])
+                tmp_title = matches[0].upper()
+                tmp_title = tmp_title.replace('Á', 'A').replace('Ú', 'U').replace('Ű', 'U').replace('É', 'E').replace('Ó', 'O').replace('Ü', 'U').replace('Ö', 'O').replace('Ő', 'O').replace("'", '').replace('.', '')
                 tmp_title = unidecode.unidecode(tmp_title)
                 logging.info(tmp_title)
                 str_pad = " " * lcd_width
