@@ -86,8 +86,9 @@ def stop_all_threads():
     lcd.backlight(0)
     ir_conn.close()
     kill(process.pid)
-    #subprocess.call(['shutdown', '-h', 'now'], shell=False)
+    # subprocess.call(['shutdown', '-h', 'now'], shell=False)
 
+# Stopping all necessary threads when changing channels
 def stop_some_threads():
     global threads
     global stop_threads
@@ -184,11 +185,13 @@ def switch_station():
 
 def increase_display_speed():
     global display_speed
-    display_speed -= 0.1
+    if(display_speed > 0.1):
+        display_speed -= 0.1
 
 def decrease_display_speed():
     global display_speed
-    display_speed += 0.1
+    if(display_speed < 1.0):
+        display_speed += 0.1
 
 # Infinite loop for IR remote handling
 def handle_ir_remote():
@@ -347,6 +350,19 @@ def switchPressed():
     logging.info('Rotary switch pressed, shutting down python process')
     stop_all_threads()
 
+# Infinite loop for monitoring if stream closed accidentaly (it randomly happens - restarting the process should help)
+def stream_watcher():
+    global process
+    global stop_all
+    while True:
+        if stop_all:
+            logging.info('Stopping stream watcher thread')
+            break
+        actual_process = psutil.Process(process.pid)
+        if not (actual_process.is_running()):
+            switch_station()
+        time.sleep(4.0)
+
 # Starting all processes, setting up logging
 def main():
     global lcd
@@ -375,6 +391,9 @@ def main():
     t5 = threading.Thread(target = handle_ir_remote, name='ir_remote_thread')
     threads.append(t5)
     t5.start()
+    t6 = threading.Thread(target = stream_watcher, name='stream_watcher')
+    threads.append(t6)
+    t6.start()
 
 if __name__ == '__main__':
     main()
