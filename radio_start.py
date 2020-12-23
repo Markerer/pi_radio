@@ -24,6 +24,7 @@ title = ""
 lcd_width = 20
 process = 0
 threads = []
+display_speed = 0.5
 
 ir_conn = RawConnection()
 
@@ -90,7 +91,6 @@ def stop_all_threads():
 def stop_some_threads():
     global threads
     global stop_threads
-    global process
     stop_threads = True
     threads_to_remove = []
     for t in threads:
@@ -104,12 +104,11 @@ def stop_some_threads():
     logging.info(f'From {len(threads)} threads {len(threads_to_remove)} have been removed')
     stop_threads = False
 
+# Infinite loop for extracting stream title
 def extract_stream_title():
     global title
     global lcd_width
     global process
-    global current_station
-    global stations
     global stop_threads
     while True:
         if stop_threads:
@@ -131,12 +130,13 @@ def extract_stream_title():
                 str_pad = " " * lcd_width
                 title = str_pad + tmp_title.upper()
 
+# Infinite loop for displaying actual station and information
 def display_station(name):
     global lcd
     global title
     global lcd_width
     global current_station
-    global stations
+    global display_speed
     str_pad = " " * lcd_width
     str_pad_station = (lcd_width - len(name) - 2) * " "
     while True:
@@ -154,7 +154,7 @@ def display_station(name):
             lcd.lcd_display_string(name.upper() + str_pad_station + str(current_station + 1).zfill(2), 2)
             lcd_text = title[i:(i+lcd_width)]
             lcd.lcd_display_string(lcd_text,3)
-            time.sleep(0.5)
+            time.sleep(display_speed)
             lcd.lcd_display_string(str_pad,3)
             current_volume = 'HANGERO: ' + str(mixer.getvolume()[0])
             str_pad_volume = (lcd_width - len(current_volume)) * " "
@@ -173,12 +173,24 @@ def get_current_station_name():
     global current_station
     return stations[current_station].get('name')
 
-def switch_station():
+def get_current_station_url():
     global stations
     global current_station
-    global process
-    process = start_stream(stations[current_station].get('url'), process)
+    return stations[current_station].get('url')
 
+def switch_station():
+    global process
+    process = start_stream(get_current_station_url(), process)
+
+def increase_display_speed():
+    global display_speed
+    display_speed -= 0.1
+
+def decrease_display_speed():
+    global display_speed
+    display_speed += 0.1
+
+# Infinite loop for IR remote handling
 def handle_ir_remote():
     global ir_conn
     global stop_all
@@ -216,9 +228,16 @@ def handle_ir_remote():
             elif(command == 'KEY_POWER'):
                 logging.info('IR POWER key pressed')
                 stop_all_threads()
+            elif(command == 'KEY_REWIND'):
+                logging.info('IR REWIND key pressed')
+                decrease_display_speed()
+                time.sleep(0.5)
+            elif(command == 'KEY_FASTFORWARD'):
+                logging.info('IR FASTFORWARD key pressed')
+                increase_display_speed()
+                time.sleep(0.5)
             
-            
-
+# Infinite loop for rotary encoder (for channel switch)
 def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
@@ -256,6 +275,7 @@ def handle_rotary_encoder():
         GPIO.remove_event_detect(SWITCHPIN)
         time.sleep(5)
 
+# Infinite loop for rotary encoder (for volume switch)
 def handle_volume_rotary_encoder():
     CLOCKPIN = 5
     DATAPIN = 6
@@ -272,6 +292,7 @@ def handle_volume_rotary_encoder():
         volky040.stop()
         GPIO.cleanup()
 
+# Callback for rotary encoder change (for volume switch)
 def rotaryVolumeChange(direction):
     current_volume = mixer.getvolume()[0]
     if(direction == 0 and current_volume >= 5):
@@ -293,11 +314,11 @@ def volumeSwitchPressed():
         mixer.setvolume(last_volume)
         logging.info('Unmuted')
 
+# Callback for rotary encoder change (for station switch)
 def rotaryChange(direction):
     global current_station
     global stations
     global threads
-    global process
     logging.info(f'current_station before: {current_station}')
     if(direction == 0):
         if(current_station > 0):
@@ -321,13 +342,13 @@ def rotaryChange(direction):
     threads.append(t2)
     t2.start()
 
+# Callback for rotary switch press (on station switch encoder)
 def switchPressed():
     logging.info('Rotary switch pressed, shutting down python process')
     stop_all_threads()
 
+# Starting all processes, setting up logging
 def main():
-    global stations
-    global current_station
     global lcd
     global process
     global threads
@@ -337,7 +358,7 @@ def main():
      level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     lcd = i2c_lcd.lcd()
-    process = start_stream(stations[current_station].get('url'))
+    process = start_stream(get_current_station_url())
     t1 = threading.Thread(target=extract_stream_title, name='extract_thread')
     t1.daemon = True
     threads.append(t1)
