@@ -24,7 +24,7 @@ title = ""
 lcd_width = 20
 process = 0
 threads = []
-display_speed = 0.5
+display_step = 2
 
 ir_conn = RawConnection()
 
@@ -137,7 +137,7 @@ def display_station(name):
     global title
     global lcd_width
     global current_station
-    global display_speed
+    global display_step
     str_pad = " " * lcd_width
     str_pad_station = (lcd_width - len(name) - 2) * " "
     while True:
@@ -147,7 +147,8 @@ def display_station(name):
             lcd.lcd_clear()
             break
         time.sleep(1)
-        for i in range (0, len(title)):
+        i = 0
+        while i < len(title):
             if stop_threads:
                 logging.info('Stopping display thread from display for cycle')
                 break
@@ -155,11 +156,12 @@ def display_station(name):
             lcd.lcd_display_string(name.upper() + str_pad_station + str(current_station + 1).zfill(2), 2)
             lcd_text = title[i:(i+lcd_width)]
             lcd.lcd_display_string(lcd_text,3)
-            time.sleep(display_speed)
+            time.sleep(0.5)
             lcd.lcd_display_string(str_pad,3)
             current_volume = 'HANGERO: ' + str(mixer.getvolume()[0])
             str_pad_volume = (lcd_width - len(current_volume)) * " "
             lcd.lcd_display_string(current_volume + str_pad_volume, 4)
+            i += display_step
 
 def start_stream(url, process=None):
     if not (process is None):
@@ -183,15 +185,17 @@ def switch_station():
     global process
     process = start_stream(get_current_station_url(), process)
 
-def increase_display_speed():
-    global display_speed
-    if(display_speed > 0.1):
-        display_speed -= 0.1
+def increase_display_step():
+    global display_step
+    if(display_step < 5):
+        display_step += 1
+        logging.info(f'Display step set to {display_step}')
 
-def decrease_display_speed():
-    global display_speed
-    if(display_speed < 1.0):
-        display_speed += 0.1
+def decrease_display_step():
+    global display_step
+    if(display_step > 1):
+        display_step -= 1
+        logging.info(f'Display step set to {display_step}')
 
 # Infinite loop for IR remote handling
 def handle_ir_remote():
@@ -233,11 +237,11 @@ def handle_ir_remote():
                 stop_all_threads()
             elif(command == 'KEY_REWIND'):
                 logging.info('IR REWIND key pressed')
-                decrease_display_speed()
+                decrease_display_step()
                 time.sleep(0.5)
             elif(command == 'KEY_FASTFORWARD'):
                 logging.info('IR FASTFORWARD key pressed')
-                increase_display_speed()
+                increase_display_step()
                 time.sleep(0.5)
             
 # Infinite loop for rotary encoder (for channel switch)
@@ -360,6 +364,8 @@ def stream_watcher():
             break
         actual_process = psutil.Process(process.pid)
         if not (actual_process.is_running()):
+            logging.error('Audio process was not running')
+            logging.info('Restarting audio stream')
             switch_station()
         time.sleep(4.0)
 
