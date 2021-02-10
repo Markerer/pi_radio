@@ -1,0 +1,24 @@
+1.: copy /boot/config.txt
+    add line to /etc/modules : i2c-dev
+   and : snd_soc_pcm5102a
+1a: sudo nano /etc/fstab -> /boot entry add rw flag after defaults
+2.: sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+3.: sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.7 2
+4.: sudo apt install python3-pip git lirc i2c-tools python3-smbus mpg123 python-alsaaudio -y
+4a: sudo apt update && sudo apt upgrade -y
+5.: copy pi_radio folder content (without git) to /home/pi/pi_radio
+6.: sudo python -m pip install -r /home/pi/pi_radio/requirements.txt
+7.: sudo python /home/pi/pi_radio/KY040/setup.py install
+8.: sudo mv /etc/lirc/lircd.conf.d/devinput.lircd.conf /etc/lirc/lircd.conf.d/devinput.lircd.conf.save
+9.: sudo mv /home/pi/pi_radio/RMSC1.lircd.conf /etc/lirc/lircd.conf.d/RMSC1.lircd.conf
+10: sudo mv /home/pi/pi_radio/asound.conf /etc/asound.conf
+11: sudo cp /etc/asound.conf /home/pi/.asoundrc
+12: edit /etc/lirc/lirc_options.conf [driver=default] [device=/dev/lirc0]
+13: sudo dphys-swapfile swapoff
+14: sudo dphys-swapfile uninstall
+15: sudo update-rc.d dphys-swapfile remove
+16: sudo nano /etc/dphys-swapfile -> CONF_SWAPSIZE=0
+17: python -m pip install lirc
+
+final: sudo reboot now
+
