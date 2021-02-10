@@ -166,7 +166,7 @@ def display_station(name):
 def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
-    args = ['mpg123', '-y', '--utf8', '--long-tag', url]
+    args = ['mpg123', '-y', url, '--utf8', '--long-tag']
     proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     logging.info(f'Starting process with pid: {proc.pid}')
     return proc

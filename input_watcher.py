@@ -14,7 +14,7 @@ process = None
 
 def start_radio():
     global process
-    process = subprocess.Popen(['python', '-B', '/home/pi/lcd/radio_start.py'])
+    process = subprocess.Popen(['python', '-B', '/home/pi/pi_radio/radio_start.py'])
     logging.info(f'Radio_start.py subprocess started with pid: {process.pid}')
     set_diode('green')
 

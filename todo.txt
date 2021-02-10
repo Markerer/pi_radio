@@ -18,7 +18,11 @@
 14: sudo dphys-swapfile uninstall
 15: sudo update-rc.d dphys-swapfile remove
 16: sudo nano /etc/dphys-swapfile -> CONF_SWAPSIZE=0
-17: python -m pip install lirc
+17: sudo nano /usr/lib/python3/dist-packages/lirc/paths.py -> comment out the "try: os.unlink block"
+18: mkdir /home/pi/logs
+19: sudo nano /etc/rc.local -> add "sudo python -B /home/pi/pi_radio/input_watcher.py &" before exit statement
+20: make sure i2c is enabled (sudo i2cdetect -y 1)
+
 
 final: sudo reboot now
 
