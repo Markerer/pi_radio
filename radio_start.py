@@ -115,7 +115,7 @@ def extract_stream_title():
         if stop_threads:
             logging.info('Stopping extract thread from extract root')
             break
-        time.sleep(2)
+        time.sleep(1.0)
         for line in process.stdout:
             if stop_threads:
                 logging.info('Stopping extract thread from extract for cycle')
@@ -146,7 +146,7 @@ def display_station(name):
             logging.info('Stopping display thread from display root')
             lcd.lcd_clear()
             break
-        time.sleep(1)
+        time.sleep(1.0)
         i = 0
         while i < len(title):
             if stop_threads:
@@ -166,7 +166,7 @@ def display_station(name):
 def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
-    args = ['mpg123', '-y', url, '--utf8', '--long-tag']
+    args = ['mpg123', '-y', url, '--utf8', '--long-tag', '--timeout 8']
     proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     logging.info(f'Starting process with pid: {proc.pid}')
     return proc
@@ -212,7 +212,7 @@ def handle_ir_remote():
         except:
             keypress=""
 
-        time.sleep(0.1)
+        time.sleep(0.25)
         
         if (keypress != "" and keypress != None):
                     
@@ -261,7 +261,7 @@ def handle_rotary_encoder():
             GPIO.setmode(GPIO.BCM)
             if stop_all:
                 break
-            time.sleep(0.1)
+            time.sleep(0.25)
             if GPIO.event_detected(CLOCKPIN):
                 GPIO.remove_event_detect(CLOCKPIN)
                 if GPIO.input(CLOCKPIN) == 0:
@@ -294,7 +294,7 @@ def handle_volume_rotary_encoder():
             global stop_all
             if stop_all:
                 break
-            time.sleep(0.1)
+            time.sleep(0.25)
     finally:
         volky040.stop()
         GPIO.cleanup()
@@ -367,7 +367,7 @@ def stream_watcher():
             logging.error('Audio process was not running')
             logging.info('Restarting audio stream')
             switch_station()
-        time.sleep(4.0)
+        time.sleep(2.0)
 
 # Starting all processes, setting up logging
 def main():
