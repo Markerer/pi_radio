@@ -42,10 +42,6 @@ stations = [
         'url': 'http://mr-stream.mediaconnect.hu/4738/mr2.mp3'
     },
     {
-        'name': 'Sunshine radio',
-        'url': 'http://195.56.193.129:8100/;stream.nsv#.mp3'
-    },
-    {
         'name': 'Megadance',
         'url': 'http://megadanceradio.hopto.org:8000/livemega.mp3'
     },
@@ -54,8 +50,12 @@ stations = [
         'url': 'http://stream1.retroradio.hu/high.mp3'
     },
     {
-        'name': 'Jolly radio',
-        'url': 'http://stream.mercyradio.eu/jolly.mp3'
+        'name': 'KISS FM - Beats',
+        'url': 'http://topradio-de-hz-fal-stream02-cluster01.radiohost.de/kissfm-pure_mp3-192'
+    },
+    {
+        'name': 'BEST FM Debrecen',
+        'url': 'http://stream.webthings.hu:8000/fm95-x-128.mp3'
     }
 ]
 
@@ -121,6 +121,10 @@ def extract_stream_title():
                 logging.info('Stopping extract thread from extract for cycle')
                 break
             logging.info(line)
+            decoding_finished = re.findall("Decoding of (.*) finished.", line.decode('UTF-8'))
+            if(len(decoding_finished) > 0):
+                logging.error('Decoding finished, restarting audio process.')
+                switch_station()
             matches = re.findall("ICY-META: StreamTitle='(.*?(?=\\';))", line.decode('UTF-8'))
             if(len(matches) > 0):
                 logging.info(matches[0])
@@ -166,7 +170,7 @@ def display_station(name):
 def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
-    args = ['mpg123', '-y', url, '--utf8', '--long-tag', '--timeout 8']
+    args = ['mpg123', '-y', url, '--utf8', '--long-tag', '--timeout 5']
     proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     logging.info(f'Starting process with pid: {proc.pid}')
     return proc
@@ -253,7 +257,7 @@ def handle_rotary_encoder():
     GPIO.setup(CLOCKPIN, GPIO.IN)
     GPIO.setup(DATAPIN, GPIO.IN)
     GPIO.setup(SWITCHPIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
+    GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=250)
     GPIO.add_event_detect(SWITCHPIN, GPIO.FALLING, bouncetime=750)
     try:
         while True:
@@ -271,7 +275,7 @@ def handle_rotary_encoder():
                     else:
                         rotaryChange(0)
                 time.sleep(0.5)
-                GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
+                GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=250)
             if GPIO.event_detected(SWITCHPIN):
                 if GPIO.input(SWITCHPIN) == 0:
                     switchPressed()
@@ -287,7 +291,7 @@ def handle_volume_rotary_encoder():
     CLOCKPIN = 5
     DATAPIN = 6
     SWITCHPIN = 13
-    volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
+    volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=250, switchBouncetime=750)
     volky040.start()
     try:
         while True:
@@ -307,13 +311,13 @@ def rotaryVolumeChange(direction):
     if(direction == 1 and current_volume <= 95):
         mixer.setvolume(current_volume + 5)
     logging.info(f'Current_volume: {current_volume}')
-    logging.info(f'New value: {mixer.getvolume()}')
+    logging.info(f'New value: {mixer.getvolume()[0]}')
 
 # Callback for switch button pressed
 def volumeSwitchPressed():
     global last_volume
     current_volume = mixer.getvolume()[0]
-    if(current_volume > 0):
+    if(current_volume != 0):
         mixer.setvolume(0)
         last_volume = current_volume
         logging.info('Muted')
@@ -354,21 +358,6 @@ def switchPressed():
     logging.info('Rotary switch pressed, shutting down python process')
     stop_all_threads()
 
-# Infinite loop for monitoring if stream closed accidentaly (it randomly happens - restarting the process should help)
-def stream_watcher():
-    global process
-    global stop_all
-    while True:
-        if stop_all:
-            logging.info('Stopping stream watcher thread')
-            break
-        actual_process = psutil.Process(process.pid)
-        if not (actual_process.is_running()):
-            logging.error('Audio process was not running')
-            logging.info('Restarting audio stream')
-            switch_station()
-        time.sleep(2.0)
-
 # Starting all processes, setting up logging
 def main():
     global lcd
@@ -397,9 +386,6 @@ def main():
     t5 = threading.Thread(target = handle_ir_remote, name='ir_remote_thread')
     threads.append(t5)
     t5.start()
-    t6 = threading.Thread(target = stream_watcher, name='stream_watcher')
-    threads.append(t6)
-    t6.start()
 
 if __name__ == '__main__':
     main()
