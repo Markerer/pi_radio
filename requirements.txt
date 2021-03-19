@@ -3,3 +3,4 @@ smbus
 unidecode
 RPi-GPIO-Rotary
 mplayer.py
+pyalsaaudio
