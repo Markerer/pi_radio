@@ -17,7 +17,7 @@ mixer = alsaaudio.Mixer('SoftMaster')
 
 last_volume = 100
 
-current_station = 0
+current_station = 1
 stop_threads = False
 stop_all = False
 title = ""
@@ -257,7 +257,7 @@ def handle_rotary_encoder():
     GPIO.setup(CLOCKPIN, GPIO.IN)
     GPIO.setup(DATAPIN, GPIO.IN)
     GPIO.setup(SWITCHPIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=250)
+    GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
     GPIO.add_event_detect(SWITCHPIN, GPIO.FALLING, bouncetime=750)
     try:
         while True:
@@ -265,7 +265,7 @@ def handle_rotary_encoder():
             GPIO.setmode(GPIO.BCM)
             if stop_all:
                 break
-            time.sleep(0.25)
+            time.sleep(0.15)
             if GPIO.event_detected(CLOCKPIN):
                 GPIO.remove_event_detect(CLOCKPIN)
                 if GPIO.input(CLOCKPIN) == 0:
@@ -275,7 +275,7 @@ def handle_rotary_encoder():
                     else:
                         rotaryChange(0)
                 time.sleep(0.5)
-                GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=250)
+                GPIO.add_event_detect(CLOCKPIN, GPIO.FALLING, bouncetime=50)
             if GPIO.event_detected(SWITCHPIN):
                 if GPIO.input(SWITCHPIN) == 0:
                     switchPressed()
@@ -291,14 +291,14 @@ def handle_volume_rotary_encoder():
     CLOCKPIN = 5
     DATAPIN = 6
     SWITCHPIN = 13
-    volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=250, switchBouncetime=750)
+    volky040 = KY040(CLOCKPIN, DATAPIN, SWITCHPIN, rotaryVolumeChange, volumeSwitchPressed, rotaryBouncetime=25, switchBouncetime=750)
     volky040.start()
     try:
         while True:
             global stop_all
             if stop_all:
                 break
-            time.sleep(0.25)
+            time.sleep(0.15)
     finally:
         volky040.stop()
         GPIO.cleanup()
