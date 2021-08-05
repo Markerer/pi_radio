@@ -1,0 +1,17 @@
+---
+- name: Turning swapping off
+  command: dphys-swapfile swapoff
+
+- name: Removing swapfile
+  command: dphys-swapfile uninstall
+
+- name: Disabling swapping
+  service:
+    name: dphys-swapfile
+    enabled: no
+
+- name: Modifying swapfile size to zero
+  lineinfile:
+    path: /etc/dphys-swapfile
+    regexp: '^CONF_SWAPFILE='
+    line: CONF_SWAPFILE=0

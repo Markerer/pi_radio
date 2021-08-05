@@ -26,4 +26,15 @@
     src: pi_radio.zip
     dest: "{{ pi_home_folder }}"
     remote_src: no
-  
+
+- name: Create log folder
+  file:
+    path: /home/pi/logs
+    state: directory
+    mode: 0750
+
+- name: Configuring automatic startup for input_watcher.py script
+  lineinfile:
+    path: /etc/rc.local
+    insertbefore: '^exit 0'
+    line: "sudo python -B {{ pi_home_folder }}/pi_radio/input_watcher.py &"

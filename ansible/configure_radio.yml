@@ -6,3 +6,8 @@
     - python_setup
     - lirc_setup
     - swap_config
+  
+  post_tasks:
+    - name: Rebooting the RPi to apply all configurations
+      reboot:
+        reboot_timeout: 3600

@@ -28,4 +28,12 @@
     owner: pi
     group: pi
     mode: 0750
-  
+
+- name: Configure lirc_options
+  blockinfile:
+    path: /etc/lirc/lirc_options.conf
+    block: |
+      [lircd]
+      nodaemon = False
+      driver = default
+      device = /dev/lirc0
