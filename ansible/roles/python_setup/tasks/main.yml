@@ -1,0 +1,39 @@
+---
+- name: Setup python2 alternative
+  alternatives:
+    name: python
+    path: /usr/bin/python{{ python2_version }}
+
+- name: Setup python3 alternative
+  alternatives:
+    name: python
+    path: /usr/bin/python{{ python3_version }}
+
+- name: Setup apt libraries for python, lirc, i2c, mpg123
+  apt:
+    pkg:
+    - python3-pip
+    - git
+    - lirc
+    - i2c-tools
+    - python3-smbus
+    - mpg123
+    - python-alsaaudio
+    state: present
+
+- name: Perform apt update
+  apt:
+    update_cache: yes
+
+- name: Perform apt upgrade for all packages
+  apt:
+    name: '*'
+    state: latest
+
+- name: Install required pip packages
+  pip:
+    requirements: "{{ pi_home_folder }}/pi_radio/requirements.txt"
+
+- name: Installing KY040 python package
+  command: python "{{ pi_home_folder }}/pi_radio/KY040/setup.py install"
+    

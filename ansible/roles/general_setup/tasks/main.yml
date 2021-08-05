@@ -1,0 +1,29 @@
+---
+- name: Copy config.txt
+  copy:
+    src: config.txt
+    dest: /boot/config.txt
+    owner: root
+    group: root
+    mode: 0750
+
+- name: Add configs to /etc/modules
+  blockinfile:
+    path: /etc/modules
+    block: |
+      i2c-dev
+      snd_soc_pcm5102a
+
+- name: Ensure /etc/fstab /boot entry is rw
+  mount:
+    src: /boot
+    path: /boot
+    opts: "defaults,rw"
+    state: present
+
+- name: Copy and unzip pi_radio.zip
+  unarchive:
+    src: pi_radio.zip
+    dest: "{{ pi_home_folder }}"
+    remote_src: no
+  

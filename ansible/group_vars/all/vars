@@ -1,0 +1,3 @@
+---
+pi_user: pi
+pi_home_folder: /home/{{ pi_user }}

@@ -1,0 +1,8 @@
+---
+- hosts: all
+  become: yes
+  roles:
+    - general_setup
+    - python_setup
+    - lirc_setup
+    - swap_config

@@ -1,0 +1,3 @@
+---
+lirc_conf_folder: /etc/lirc/lircd.conf.d
+lirc_remote_file: RMSC1.lircd.conf

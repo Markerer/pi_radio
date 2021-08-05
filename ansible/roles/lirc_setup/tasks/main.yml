@@ -1,0 +1,31 @@
+---
+- name: Saving old devinput.lircd.conf
+  command:
+    cmd: mv {{ lirc_conf_folder }}/devinput.lircd.conf {{ lirc_conf_folder }}/devinput.lircd.conf.save
+    removes: "{{ lirc_conf_folder }}/devinput.lircd.conf"
+    creates: "{{ lirc_conf_folder }}/devinput.lircd.conf.save"
+
+- name: Copying RMSC1.lircd.conf
+  copy:
+    src: "{{ lirc_remote_conf_file }}"
+    dest: "{{ lirc_conf_folder }}/{{ lirc_remote_conf_file }}"
+    owner: pi
+    group: pi
+    mode: 0750
+
+- name: Copying asound.conf to global folder
+  copy:
+    src: asound.conf
+    dest: /etc/asound.conf
+    owner: pi
+    group: pi
+    mode: 0750
+
+- name: Copying asound.conf to home folder
+  copy:
+    src: asound.conf
+    dest: "{{ pi_home_folder }}/.asoundrc"
+    owner: pi
+    group: pi
+    mode: 0750
+  

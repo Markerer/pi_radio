@@ -1,3 +1,4 @@
+0. copy wpa_supplicant.conf and touch ssh file (empty)
 1.: copy /boot/config.txt
     add line to /etc/modules : i2c-dev
    and : snd_soc_pcm5102a
