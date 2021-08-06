@@ -1,3 +1,10 @@
+ssh setup
+-----------------------------------------------------
+add id_rsa.pub into ~/.ssh/authorized_keys file on pi
+ssh-agent on runner computer
+add content to ~/.bash_profile
+ssh-add ~/.ssh/id_rsa
+-----------------------------------------------------
 0. copy wpa_supplicant.conf and touch ssh file (empty)
 1.: copy /boot/config.txt
     add line to /etc/modules : i2c-dev
@@ -26,4 +33,3 @@
 
 
 final: sudo reboot now
-

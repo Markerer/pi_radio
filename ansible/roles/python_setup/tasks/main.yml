@@ -1,11 +1,4 @@
 ---
-- name: Setup python python2 alternative
-  alternatives:
-    name: python
-    link: /usr/bin/python
-    path: /usr/bin/python{{ python2_version }}
-    priority: 1
-
 - name: Setup python python3 alternative
   alternatives:
     name: python
@@ -49,5 +42,5 @@
 - name: Replacing wrong setup script block in lirc pip package
   replace:
     path: "{{ global_python3_dist_packages_folder }}/lirc/paths.py"
-    regexp: "^os.unlink(os.path.join(HERE, '_client.so'))"
-    replace: "# os.unlink(os.path.join(HERE, '_client.so'))"
+    regexp: "(os\\.unlink\\(os\\.path\\.join\\(HERE, \\'_client\\.so\\'\\)\\))"
+    replace: 'pass'

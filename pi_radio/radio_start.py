@@ -17,7 +17,7 @@ mixer = alsaaudio.Mixer('SoftMaster')
 
 last_volume = 100
 
-current_station = 1
+current_station = 0
 stop_threads = False
 stop_all = False
 title = ""

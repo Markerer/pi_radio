@@ -14,9 +14,9 @@
       i2c-dev
       snd_soc_pcm5102a
 
-- name: Copy and unzip pi_radio.zip
+- name: Copy and unzip pi_radio.tar.xz
   unarchive:
-    src: pi_radio.zip
+    src: pi_radio.tar.xz
     dest: "{{ pi_home_folder }}"
     remote_src: no
 
@@ -25,9 +25,15 @@
     path: /home/pi/logs
     state: directory
     mode: 0750
+    owner: pi
+    group: pi
 
 - name: Configuring automatic startup for input_watcher.py script
   lineinfile:
     path: /etc/rc.local
     insertbefore: '^exit 0'
     line: "sudo python -B {{ pi_home_folder }}/pi_radio/input_watcher.py &"
+
+- name: Set timezone
+  timezone: 
+    name: "{{ timezone }}"

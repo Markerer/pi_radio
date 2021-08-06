@@ -158,7 +158,6 @@ def main():
      level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     setup_gpio()
-    start_radio()
 
     while True:
         time.sleep(2)
