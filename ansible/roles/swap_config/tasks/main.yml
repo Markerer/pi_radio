@@ -13,5 +13,5 @@
 - name: Modifying swapfile size to zero
   lineinfile:
     path: /etc/dphys-swapfile
-    regexp: '^CONF_SWAPFILE='
-    line: CONF_SWAPFILE=0
+    regexp: '^CONF_SWAPSIZE='
+    line: CONF_SWAPSIZE=0

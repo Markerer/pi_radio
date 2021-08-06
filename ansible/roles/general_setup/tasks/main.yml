@@ -14,13 +14,6 @@
       i2c-dev
       snd_soc_pcm5102a
 
-- name: Ensure /etc/fstab /boot entry is rw
-  mount:
-    src: /boot
-    path: /boot
-    opts: "defaults,rw"
-    state: present
-
 - name: Copy and unzip pi_radio.zip
   unarchive:
     src: pi_radio.zip

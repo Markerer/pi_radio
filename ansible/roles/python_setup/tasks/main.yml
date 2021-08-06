@@ -1,17 +1,33 @@
 ---
-- name: Setup python2 alternative
+- name: Setup python python2 alternative
   alternatives:
     name: python
+    link: /usr/bin/python
     path: /usr/bin/python{{ python2_version }}
+    priority: 1
 
-- name: Setup python3 alternative
+- name: Setup python python3 alternative
   alternatives:
     name: python
+    link: /usr/bin/python
     path: /usr/bin/python{{ python3_version }}
+    priority: 2
+
+- name: Setup python3 python3 alternative
+  alternatives:
+    name: python3
+    link: /usr/bin/python3
+    path: /usr/bin/python{{ python3_version }}
+    priority: 2
+
+- name: Perform apt update
+  apt:
+    update_cache: yes
 
 - name: Setup apt libraries for python, lirc, i2c, mpg123
   apt:
     pkg:
+    - python3-apt
     - python3-pip
     - git
     - lirc
@@ -21,21 +37,14 @@
     - python-alsaaudio
     state: present
 
-- name: Perform apt update
-  apt:
-    update_cache: yes
-
-- name: Perform apt upgrade for all packages
-  apt:
-    name: '*'
-    state: latest
-
 - name: Install required pip packages
   pip:
     requirements: "{{ pi_home_folder }}/pi_radio/requirements.txt"
 
 - name: Installing KY040 python package
-  command: python "{{ pi_home_folder }}/pi_radio/KY040/setup.py install"
+  command: 
+    chdir: "{{ pi_home_folder }}/pi_radio/KY040"
+    cmd: "/usr/bin/python {{ pi_home_folder }}/pi_radio/KY040/setup.py install"
 
 - name: Replacing wrong setup script block in lirc pip package
   replace:

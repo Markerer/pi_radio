@@ -1,6 +1,6 @@
 # Servers
 [radio_server] 
-192.168.1.60
+192.168.0.143
 
 # Group has all the servers
 [multi:children]
