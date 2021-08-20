@@ -34,6 +34,12 @@
     insertbefore: '^exit 0'
     line: "sudo python -B {{ pi_home_folder }}/pi_radio/input_watcher.py &"
 
+- name: Configuring automatic startup for ups_lite.py script
+  lineinfile:
+    path: /etc/rc.local
+    insertbefore: '^exit 0'
+    line: "sudo python -B {{ pi_home_folder }}/pi_radio/ups_lite.py &"
+
 - name: Set timezone
   timezone: 
     name: "{{ timezone }}"

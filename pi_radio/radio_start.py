@@ -252,7 +252,7 @@ def handle_ir_remote():
 def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
-    SWITCHPIN = 3
+    SWITCHPIN = 10
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLOCKPIN, GPIO.IN)
     GPIO.setup(DATAPIN, GPIO.IN)

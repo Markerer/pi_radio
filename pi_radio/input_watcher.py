@@ -42,7 +42,7 @@ def is_input_handling_running():
 def handle_rotary_encoder():
     CLOCKPIN = 7
     DATAPIN = 8
-    SWITCHPIN = 3
+    SWITCHPIN = 10
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLOCKPIN, GPIO.IN)
     GPIO.setup(DATAPIN, GPIO.IN)
