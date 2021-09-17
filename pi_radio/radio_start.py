@@ -31,7 +31,7 @@ ir_conn = RawConnection()
 stations = [
     {
         'name': 'Radio 1',
-        'url': 'http://stream1.radio1.hu/high.mp3'
+        'url': 'https://icast.connectmedia.hu/5201/live.mp3'
     },
     {
         'name': 'Szunet radio',
