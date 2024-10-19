@@ -31,31 +31,31 @@ ir_conn = RawConnection()
 stations = [
     {
         'name': 'Radio 1',
-        'url': 'http://stream.radio1pecs.hu:8200/pecs.mp3'
+        'url': 'https://icast.connectmedia.hu/5202/live.mp3'
     },
     {
         'name': 'Szunet radio',
-        'url': 'http://92.61.114.191:1101/;'
+        'url': 'https://stream.szunetrad.io/listen/szunetradio/stream_sq.mp3'
+    },
+    {
+        'name': 'BEST FM',
+        'url': 'https://icast.connectmedia.hu/5102/live.mp3'
     },
     {
         'name': 'Petofi radio',
-        'url': 'http://mr-stream.mediaconnect.hu/4738/mr2.mp3'
+        'url': 'https://icast.connectmedia.hu/4738/mr2.mp3'
     },
     {
         'name': 'Megadance',
-        'url': 'http://megadanceradio.hopto.org:8000/livemega.mp3'
+        'url': 'https://gamershouse.hu/livemega.mp3'
     },
     {
         'name': 'Retro radio',
-        'url': 'http://stream1.retroradio.hu/high.mp3'
+        'url': 'https://icast.connectmedia.hu/5002/live.mp3'
     },
     {
         'name': 'KISS FM - Beats',
-        'url': 'http://topradio-de-hz-fal-stream02-cluster01.radiohost.de/kissfm-pure_mp3-192'
-    },
-    {
-        'name': 'BEST FM Debrecen',
-        'url': 'http://stream.webthings.hu:8000/fm95-x-128.mp3'
+        'url': 'https://topradio-stream32.radiohost.de/kissfm_aac-64'
     }
 ]
 
@@ -120,12 +120,11 @@ def extract_stream_title():
             if stop_threads:
                 logging.info('Stopping extract thread from extract for cycle')
                 break
-            logging.info(line)
             decoding_finished = re.findall("Decoding of (.*) finished.", line.decode('UTF-8'))
             if(len(decoding_finished) > 0):
                 logging.error('Decoding finished, restarting audio process.')
                 switch_station()
-            matches = re.findall("ICY-META: StreamTitle='(.*?(?=\\';))", line.decode('UTF-8'))
+            matches = re.findall("[ ]*StreamTitle[ ]*:[ ]*(.*)", line.decode('UTF-8'))
             if(len(matches) > 0):
                 logging.info(matches[0])
                 tmp_title = matches[0].upper()
@@ -170,8 +169,8 @@ def display_station(name):
 def start_stream(url, process=None):
     if not (process is None):
         kill(process.pid)
-    args = ['mpg123', '-y', url, '--utf8', '--long-tag', '--timeout 5']
-    proc = subprocess.Popen(args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    args = f"ffplay -nodisp -icy 1 {url}"
+    proc = subprocess.Popen(args, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     logging.info(f'Starting process with pid: {proc.pid}')
     return proc
 

@@ -28,6 +28,7 @@
     - python3-smbus
     - mpg123
     - python-alsaaudio
+    - ffmpeg
     state: present
 
 - name: Install required pip packages
